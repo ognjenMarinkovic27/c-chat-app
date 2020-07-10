@@ -45,7 +45,8 @@ int main () {
     {
         scanf("%d", &choice);
         if(choice!=1 && choice!=2) {
-            printf("Invalid inpput.\n");
+            printf("Invalid input.\n");
+            scanf("%d", &choice);
         }
     }
     if(choice == 1) {
@@ -113,28 +114,31 @@ int main () {
 
         printf("chat-server: waiting for connections...\n");
 
-        while(1) {
-            sin_size = sizeof client_addr;
-            commsock_fd = accept(listsock_fd, (struct sockaddr *)&client_addr, &sin_size);
-            if (commsock_fd == -1) {
-                perror("accept");
-                continue;
-            }
+        sin_size = sizeof client_addr;
+        commsock_fd = accept(listsock_fd, (struct sockaddr *)&client_addr, &sin_size);
+        if (commsock_fd == -1) {
+            perror("accept");
+            return 1;
+        }
 
-            inet_ntop(client_addr.ss_family,
-                get_in_addr((struct sockaddr *)&client_addr),
-                s, sizeof s);
-            printf("chat-server: got connection from %s\n", s);
-
+        inet_ntop(client_addr.ss_family,
+            get_in_addr((struct sockaddr *)&client_addr),
+            s, sizeof s);
+        printf("chat-server: got connection from %s\n", s);\
+        char msg[MAXDATASIZE];
+        while (strcmp(msg,"/exit") != 0)
+        {
+            printf("Type your message: ");
+            scanf(" %s", msg);
             if (!fork()) { 
-                close(listsock_fd);
-                if (send(commsock_fd, "Hello, world!", 13, 0) == -1)
+                close(listsock_fd);   
+                if (send(commsock_fd, msg, MAXDATASIZE-1, 0) == -1)
                     perror("send");
                 close(commsock_fd);
                 exit(0);
             }
-            close(commsock_fd); 
         }
+        close(commsock_fd); 
     }
     else {
         int consock_fd, numbytes;  
@@ -182,17 +186,19 @@ int main () {
 
         freeaddrinfo(servinfo);
 
-        if ((numbytes = recv(consock_fd, buf, MAXDATASIZE-1, 0)) == -1) {
-            perror("recv");
-            exit(1);
+        while(1) {
+            if ((numbytes = recv(consock_fd, buf, MAXDATASIZE-1, 0)) == -1) {
+                perror("recv");
+                exit(1);
+            }
+
+            buf[numbytes] = '\0';
+
+            printf("Received message '%s'\n",buf);
+
         }
-
-        buf[numbytes] = '\0';
-
-        printf("chat-client: received '%s'\n",buf);
-
         close(consock_fd);
     }
-    
+    return 0;   
     
 }
