@@ -124,12 +124,38 @@ int main () {
         inet_ntop(client_addr.ss_family,
             get_in_addr((struct sockaddr *)&client_addr),
             s, sizeof s);
-        printf("chat-server: got connection from %s\n", s);\
+        printf("chat-server: got connection from %s\n", s);
+        
+        char buf[MAXDATASIZE];
+        int numbytes;
+        if(!fork()) {
+            close(listsock_fd);
+            while(1) {
+                if ((numbytes = recv(commsock_fd, buf, MAXDATASIZE-1, 0)) == -1) {
+                    perror("recv");
+                    continue;
+                }
+                buf[numbytes] = '\0';
+                //TODO: actually fix empty message issue
+                if(numbytes==0) continue;
+                printf("\rReceived message '%s'\nType your message: ",buf);
+                fflush(stdout);
+            }
+            exit(0);
+        }
+
         char msg[MAXDATASIZE];
         while (strcmp(msg,"/exit") != 0)
         {
+            strcpy(msg, "");
             printf("Type your message: ");
-            scanf(" %s", msg);
+            fflush(stdout);
+            char c = 'a'; 
+            c = getchar();
+            while(c!='\n') {
+                strncat(msg, &c, 1);
+                c=getchar();
+            }
             if (!fork()) { 
                 close(listsock_fd);   
                 if (send(commsock_fd, msg, MAXDATASIZE-1, 0) == -1)
@@ -139,11 +165,13 @@ int main () {
             }
         }
         close(commsock_fd); 
+        close(listsock_fd);
     }
     else {
         int consock_fd, numbytes;  
         char buf[MAXDATASIZE];
         struct addrinfo hints, *servinfo, *p;
+        struct sigaction sa;
         int rv;
         char s[INET6_ADDRSTRLEN];
 
@@ -186,16 +214,49 @@ int main () {
 
         freeaddrinfo(servinfo);
 
-        while(1) {
-            if ((numbytes = recv(consock_fd, buf, MAXDATASIZE-1, 0)) == -1) {
-                perror("recv");
-                exit(1);
+        sa.sa_handler = sigchld_handler;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = SA_RESTART;
+        if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+            perror("sigaction");
+            exit(1);
+        }
+
+        if(!fork()) {
+            while(1) {
+                if ((numbytes = recv(consock_fd, buf, MAXDATASIZE-1, 0)) == -1) {
+                    perror("recv");
+                    continue;
+                }
+
+                buf[numbytes] = '\0';
+
+                //TODO: actually fix empty message issue
+                if(numbytes==0) continue;
+                  
+                printf("\rReceived message '%s'\nType your message: ",buf);
+                fflush(stdout);
             }
-
-            buf[numbytes] = '\0';
-
-            printf("Received message '%s'\n",buf);
-
+            exit(0);
+        }
+        char msg[MAXDATASIZE];
+        while (strcmp(msg,"/exit") != 0)
+        {
+            strcpy(msg, "");
+            printf("Type your message: ");
+            fflush(stdout);
+            char c = 'a';
+            c = getchar();
+            while(c!='\n') {
+                strncat(msg, &c, 1);
+                c=getchar();
+            }
+            if (!fork()) {   
+                if (send(consock_fd, msg, MAXDATASIZE-1, 0) == -1)
+                    perror("send");
+                close(consock_fd);
+                exit(0);
+            }
         }
         close(consock_fd);
     }
