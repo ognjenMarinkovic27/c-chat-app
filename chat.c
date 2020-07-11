@@ -143,7 +143,7 @@ int main () {
             }
             exit(0);
         }
-
+        char dummy = getchar();
         char msg[MAXDATASIZE];
         while (strcmp(msg,"/exit") != 0)
         {
@@ -176,6 +176,7 @@ int main () {
         char s[INET6_ADDRSTRLEN];
 
         char inputaddr[INET6_ADDRSTRLEN];
+        printf("Target IP Address:\n");
         scanf("%s", inputaddr);
 
         memset(&hints, 0, sizeof hints);
@@ -239,6 +240,7 @@ int main () {
             }
             exit(0);
         }
+        char dummy = getchar();
         char msg[MAXDATASIZE];
         while (strcmp(msg,"/exit") != 0)
         {
